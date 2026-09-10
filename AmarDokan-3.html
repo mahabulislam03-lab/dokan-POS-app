@@ -1,0 +1,207 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>আমার দোকান — সম্পূর্ণ হিসাব</title>
+<style>
+*{box-sizing:border-box}body{margin:0;font-family:Arial,"Noto Sans Bengali",sans-serif;background:#f4f6f8;color:#222}
+header{background:#b71c1c;color:#fff;padding:16px;text-align:center;position:sticky;top:0;z-index:5}h1{margin:0;font-size:25px}
+nav{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:8px;background:#fff;position:sticky;top:61px;z-index:4}
+button,.btn{border:0;border-radius:8px;padding:11px;background:#c62828;color:white;font-size:15px}
+nav button{background:#eee;color:#222}.active{background:#c62828!important;color:#fff!important}
+main{padding:12px;max-width:700px;margin:auto}.page{display:none}.page.show{display:block}
+.card{background:#fff;border-radius:12px;padding:15px;margin:10px 0;box-shadow:0 1px 5px #ccc}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}.stat{font-size:18px;padding:14px;border-radius:10px;background:#fff}
+input,select,textarea{width:100%;padding:11px;margin:5px 0 10px;border:1px solid #bbb;border-radius:7px;font-size:16px}
+table{width:100%;border-collapse:collapse;background:#fff}th,td{border:1px solid #ddd;padding:7px;text-align:left}th{background:#eee}
+.small{font-size:13px;color:#666}.danger{color:#b71c1c;font-weight:bold}.green{color:green;font-weight:bold}
+.actions{display:flex;gap:7px;flex-wrap:wrap}.actions button{flex:1;min-width:120px}
+#memo{background:white;padding:15px}
+</style>
+</head>
+<body>
+<header><h1>🏪 আমার দোকান</h1><div id="clock"></div></header>
+<nav>
+<button onclick="show('home')" id="n-home">🏠 ড্যাশবোর্ড</button>
+<button onclick="show('sale')" id="n-sale">🛒 বিক্রয়</button>
+<button onclick="show('products')" id="n-products">📦 পণ্য</button>
+<button onclick="show('customers')" id="n-customers">👤 কাস্টমার</button>
+<button onclick="show('due')" id="n-due">📒 বাকি</button>
+<button onclick="show('expense')" id="n-expense">💸 খরচ</button>
+<button onclick="show('reports')" id="n-reports">📊 রিপোর্ট</button>
+<button onclick="show('backup')" id="n-backup">💾 ব্যাকআপ</button>
+<button onclick="show('security')" id="n-security">🔐 PIN</button>
+</nav>
+<main>
+<section id="home" class="page show">
+<div class="grid">
+<div class="stat">আজ বিক্রয়<br><b id="todaySales">৳ ০</b></div>
+<div class="stat">আজ খরচ<br><b id="todayExp">৳ ০</b></div>
+<div class="stat">মোট বাকি<br><b id="totalDue">৳ ০</b></div>
+<div class="stat">লাভ<br><b id="profit">৳ ০</b></div>
+</div>
+<div class="card"><h3>⚠️ কম স্টক</h3><div id="lowStock">কোনো তথ্য নেই</div></div>
+<div class="card"><h3>দ্রুত কাজ</h3><div class="actions"><button onclick="show('sale')">➕ বিক্রয়</button><button onclick="show('products')">➕ পণ্য</button><button onclick="show('customers')">➕ কাস্টমার</button></div></div>
+</section>
+
+<section id="sale" class="page"><div class="card"><h2>🛒 বিক্রয় ও ক্যাশ মেমো</h2>
+<label>বারকোড</label><input id="sbarcode" placeholder="বারকোড লিখুন/স্ক্যান করুন">
+<button onclick="scanBarcode()">📷 ক্যামেরা দিয়ে বারকোড স্ক্যান</button>
+<div id="scannerBox" style="display:none;margin-top:10px">
+<video id="scannerVideo" autoplay playsinline style="width:100%;max-height:280px;background:#000;border-radius:10px"></video>
+<p id="scanStatus" class="small">বারকোড ক্যামেরার সামনে ধরুন…</p>
+<button onclick="stopScanner()">⏹️ স্ক্যান বন্ধ</button>
+</div>
+<label>পণ্যের নাম</label><input id="sname"><label>পরিমাণ</label><input id="sqty" type="number" value="1"><label>বিক্রয় মূল্য</label><input id="sprice" type="number">
+<label>ক্রয় মূল্য (লাভ হিসাবের জন্য)</label><input id="scost" type="number">
+<label>কাস্টমার</label><input id="scustomer" placeholder="নাম">
+<label>পরিশোধ</label><input id="spaid" type="number" value="0">
+<div class="actions"><button onclick="addSale()">💾 বিক্রয় সংরক্ষণ</button><button onclick="clearSale()">♻️ পরিষ্কার</button></div>
+</div><div class="card"><h3>সাম্প্রতিক বিক্রয়</h3><div id="saleList"></div></div></section>
+
+<section id="products" class="page"><div class="card"><h2>📦 পণ্য, ছবি ও স্টক</h2>
+<input id="pbarcode" placeholder="বারকোড">
+<button type="button" onclick="scanProductBarcode()">📷 পণ্যের বারকোড স্ক্যান</button>
+<div id="productScannerBox" style="display:none;margin-top:10px">
+<video id="productScannerVideo" autoplay playsinline style="width:100%;max-height:280px;background:#000;border-radius:10px"></video>
+<p id="productScanStatus" class="small">পণ্যের বারকোড ক্যামেরার সামনে ধরুন…</p>
+<button type="button" onclick="stopProductScanner()">⏹️ স্ক্যান বন্ধ</button>
+</div><input id="pname" placeholder="পণ্যের নাম"><input id="pbuy" type="number" placeholder="ক্রয় মূল্য"><input id="psell" type="number" placeholder="বিক্রয় মূল্য"><input id="pstock" type="number" placeholder="স্টক"><input id="pmin" type="number" value="5" placeholder="কম স্টক সীমা"><input id="pimg" type="file" accept="image/*">
+<button onclick="addProduct()">➕ পণ্য সংরক্ষণ</button></div><div class="card"><div id="productList"></div></div></section>
+
+<section id="customers" class="page"><div class="card"><h2>👤 কাস্টমারের ছবি সহ প্রোফাইল</h2>
+<input id="cname" placeholder="কাস্টমারের নাম"><input id="cphone" placeholder="মোবাইল"><textarea id="caddress" placeholder="ঠিকানা"></textarea><input id="cimg" type="file" accept="image/*"><button onclick="addCustomer()">👤 কাস্টমার সংরক্ষণ</button></div><div class="card"><div id="customerList"></div></div></section>
+
+<section id="due" class="page"><div class="card"><h2>📒 বাকি খাতা ও টাকা জমা</h2>
+<input id="dname" placeholder="কাস্টমারের নাম"><input id="damount" type="number" placeholder="টাকা"><select id="dtype"><option value="due">বাকি যোগ</option><option value="paid">টাকা জমা</option></select><button onclick="addDue()">💾 সংরক্ষণ</button></div><div class="card"><div id="dueList"></div></div></section>
+
+<section id="expense" class="page"><div class="card"><h2>💸 দোকানের সব খরচ</h2>
+<input id="ename" placeholder="খরচের বিবরণ"><input id="eamount" type="number" placeholder="টাকা"><button onclick="addExpense()">💾 খরচ সংরক্ষণ</button></div><div class="card"><div id="expenseList"></div></div></section>
+
+<section id="reports" class="page"><div class="card"><h2>📊 দৈনিক/মাসিক বিক্রয়</h2><button onclick="report('day')">আজ</button> <button onclick="report('month')">এই মাস</button><div id="reportBox"></div></div>
+<div class="card"><h2>📈 লাভ-ক্ষতির হিসাব</h2><div id="plBox"></div></div></section>
+
+<section id="backup" class="page"><div class="card"><h2>💾 ব্যাকআপ / রিস্টোর</h2><p>সব ডাটা ফোনের ব্রাউজারে সংরক্ষিত থাকে।</p><button onclick="backup()">⬇️ ব্যাকআপ ফাইল তৈরি</button><hr><input type="file" id="restoreFile" accept=".json"><button onclick="restore()">⬆️ রিস্টোর</button><button onclick="clearAll()">🗑️ সব ডাটা মুছুন</button></div></section>
+
+<section id="security" class="page"><div class="card"><h2>🔐 PIN নিরাপত্তা</h2><input id="newpin" type="password" maxlength="6" placeholder="নতুন PIN"><button onclick="setPin()">PIN সংরক্ষণ</button><p class="small">এই HTML ফাইলটি ব্যক্তিগত ফোনে ব্যবহার করুন। ব্রাউজারের ডাটা মুছে ফেললে হিসাবও মুছে যেতে পারে—নিয়মিত ব্যাকআপ রাখুন।</p></div></section>
+</main>
+<script>
+const K='amarDokan_v1';
+let D=JSON.parse(localStorage.getItem(K)||'{"products":[],"sales":[],"customers":[],"dues":[],"expenses":[],"pin":""}');
+function save(){localStorage.setItem(K,JSON.stringify(D));render()}
+function money(n){return '৳ '+Number(n||0).toLocaleString('bn-BD',{maximumFractionDigits:2})}
+function date(){return new Date().toISOString().slice(0,10)}
+function show(id){document.querySelectorAll('.page').forEach(x=>x.classList.remove('show'));document.getElementById(id).classList.add('show');document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));document.getElementById('n-'+id)?.classList.add('active');render()}
+function addSale(){let q=+sqty.value||1,p=+sprice.value||0,c=+scost.value||0,paid=+spaid.value||0;if(!sname.value||!p)return alert('পণ্যের নাম ও বিক্রয় মূল্য দিন');D.sales.push({date:date(),name:sname.value,barcode:sbarcode.value,qty:q,price:p,cost:c,customer:scustomer.value,paid});let pr=D.products.find(x=>x.barcode&&x.barcode===sbarcode.value);if(pr)pr.stock=Math.max(0,pr.stock-q);save();clearSale()}
+function clearSale(){['sbarcode','sname','sprice','scost','scustomer','spaid'].forEach(x=>document.getElementById(x).value='');sqty.value=1}
+function addProduct(){let f=pimg.files[0];let go=(img='')=>{D.products.push({barcode:pbarcode.value,name:pname.value,buy:+pbuy.value||0,sell:+psell.value||0,stock:+pstock.value||0,min:+pmin.value||0,img});save();['pbarcode','pname','pbuy','psell','pstock'].forEach(x=>document.getElementById(x).value='')};if(f){let r=new FileReader();r.onload=()=>go(r.result);r.readAsDataURL(f)}else go()}
+function addCustomer(){let f=cimg.files[0],go=(img='')=>{D.customers.push({name:cname.value,phone:cphone.value,address:caddress.value,img});save();cname.value=cphone.value=caddress.value=''};if(f){let r=new FileReader();r.onload=()=>go(r.result);r.readAsDataURL(f)}else go()}
+function addDue(){let n=dname.value,a=+damount.value||0;if(!n||!a)return alert('নাম ও টাকা দিন');D.dues.push({date:date(),name:n,amount:a,type:dtype.value});save();dname.value=damount.value=''}
+function addExpense(){let n=ename.value,a=+eamount.value||0;if(!n||!a)return alert('বিবরণ ও টাকা দিন');D.expenses.push({date:date(),name:n,amount:a});save();ename.value=eamount.value=''}
+
+let productScannerStream=null, productScannerFrame=null;
+async function scanProductBarcode(){
+ const box=document.getElementById('productScannerBox'),video=document.getElementById('productScannerVideo'),status=document.getElementById('productScanStatus');
+ box.style.display='block';
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){status.textContent='❌ এই ব্রাউজারে ক্যামেরা সুবিধা নেই। Chrome ব্যবহার করুন।';return}
+ if(!('BarcodeDetector' in window)){status.textContent='❌ এই ব্রাউজারে BarcodeDetector নেই। Chrome-এর সাম্প্রতিক সংস্করণ ব্যবহার করুন।';return}
+ try{
+  const supported=await BarcodeDetector.getSupportedFormats();
+  const formats=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','codabar','itf','qr_code'].filter(x=>supported.includes(x));
+  const detector=new BarcodeDetector({formats});
+  productScannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+  video.srcObject=productScannerStream; await video.play();
+  status.textContent='📷 বারকোডের দিকে ক্যামেরা ধরুন…';
+  const loop=async()=>{
+   if(!productScannerStream)return;
+   try{
+    const codes=await detector.detect(video);
+    if(codes.length){
+     document.getElementById('pbarcode').value=codes[0].rawValue||'';
+     status.textContent='✅ বারকোড পাওয়া গেছে: '+codes[0].rawValue;
+     stopProductScanner(); return;
+    }
+   }catch(e){}
+   productScannerFrame=requestAnimationFrame(loop);
+  };
+  productScannerFrame=requestAnimationFrame(loop);
+ }catch(e){status.textContent='❌ ক্যামেরা চালু হয়নি। Camera Permission দিন।'}
+}
+function stopProductScanner(){
+ if(productScannerFrame)cancelAnimationFrame(productScannerFrame);
+ productScannerFrame=null;
+ if(productScannerStream){productScannerStream.getTracks().forEach(t=>t.stop());productScannerStream=null}
+ const v=document.getElementById('productScannerVideo'); if(v)v.srcObject=null;
+ const b=document.getElementById('productScannerBox'); if(b)b.style.display='none';
+}
+let scannerStream=null, scannerFrame=null;
+async function scanBarcode(){
+ const box=document.getElementById('scannerBox'),video=document.getElementById('scannerVideo'),status=document.getElementById('scanStatus');
+ box.style.display='block';
+ if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){
+   status.textContent='এই ব্রাউজারে ক্যামেরা API পাওয়া যায়নি। Chrome ব্যবহার করুন এবং HTTPS/localhost থেকে ফাইলটি খুলুন।'; return;
+ }
+ if(!('BarcodeDetector' in window)){
+   status.textContent='এই ব্রাউজারে সরাসরি BarcodeDetector নেই। Chrome-এর সাম্প্রতিক সংস্করণ ব্যবহার করুন; প্রয়োজনে বারকোড নম্বর হাতে লিখতে পারবেন।'; return;
+ }
+ try{
+   const supported=await BarcodeDetector.getSupportedFormats();
+   const formats=['ean_13','ean_8','upc_a','upc_e','code_128','code_39','codabar','itf','qr_code'].filter(x=>supported.includes(x));
+   const detector=new BarcodeDetector({formats:formats});
+   scannerStream=await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'},width:{ideal:1280},height:{ideal:720}}});
+   video.srcObject=scannerStream;
+   await video.play();
+   status.textContent='বারকোড ক্যামেরার সামনে ধরুন…';
+   const loop=async()=>{
+     if(!scannerStream)return;
+     try{
+       const codes=await detector.detect(video);
+       if(codes.length){
+         const value=codes[0].rawValue||'';
+         document.getElementById('sbarcode').value=value;
+         const pr=D.products.find(x=>String(x.barcode)===String(value));
+         if(pr){
+           document.getElementById('sname').value=pr.name;
+           document.getElementById('sprice').value=pr.sell;
+           document.getElementById('scost').value=pr.buy;
+           status.textContent='✅ পণ্য পাওয়া গেছে: '+pr.name;
+         }else{
+           status.textContent='✅ বারকোড: '+value+' — পণ্য তালিকায় নেই';
+         }
+         stopScanner();
+         return;
+       }
+     }catch(e){}
+     scannerFrame=requestAnimationFrame(loop);
+   };
+   scannerFrame=requestAnimationFrame(loop);
+ }catch(e){
+   status.textContent='❌ ক্যামেরা চালু হয়নি। ব্রাউজারে Camera অনুমতি দিন।';
+ }
+}
+function stopScanner(){
+ if(scannerFrame)cancelAnimationFrame(scannerFrame);
+ scannerFrame=null;
+ if(scannerStream){scannerStream.getTracks().forEach(t=>t.stop());scannerStream=null;}
+ const v=document.getElementById('scannerVideo'); if(v)v.srcObject=null;
+ const b=document.getElementById('scannerBox'); if(b)b.style.display='none';
+}
+function report(mode){let now=new Date(),arr=D.sales.filter(x=>mode==='day'?x.date===date():x.date.slice(0,7)===date().slice(0,7));let total=arr.reduce((s,x)=>s+x.qty*x.price,0);reportBox.innerHTML='<h3>'+ (mode==='day'?'আজ':'এই মাস')+' বিক্রয়: '+money(total)+'</h3>'+arr.map(x=>x.name+' — '+x.qty+' × '+money(x.price)).join('<br>')||'কোনো বিক্রয় নেই'}
+function backup(){let b=new Blob([JSON.stringify(D)],{type:'application/json'}),a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='AmarDokan_Backup_'+date()+'.json';a.click()}
+function restore(){let f=restoreFile.files[0];if(!f)return alert('ব্যাকআপ ফাইল নির্বাচন করুন');let r=new FileReader();r.onload=()=>{try{D=JSON.parse(r.result);save();alert('রিস্টোর সম্পন্ন')}catch(e){alert('ফাইলটি সঠিক নয়')}};r.readAsText(f)}
+function clearAll(){if(confirm('সব হিসাব মুছে ফেলবেন?')){D={products:[],sales:[],customers:[],dues:[],expenses:[],pin:''};save()}}
+function setPin(){let p=newpin.value;if(p.length<4)return alert('কমপক্ষে ৪ সংখ্যার PIN দিন');D.pin=p;save();alert('PIN সংরক্ষণ হয়েছে')}
+function render(){
+let today=D.sales.filter(x=>x.date===date()), ex=D.expenses.filter(x=>x.date===date());
+let ts=today.reduce((s,x)=>s+x.qty*x.price,0),te=ex.reduce((s,x)=>s+x.amount,0),due=D.dues.reduce((s,x)=>s+(x.type==='due'?x.amount:-x.amount),0),pr=D.sales.reduce((s,x)=>s+x.qty*(x.price-x.cost),0)-D.expenses.reduce((s,x)=>s+x.amount,0);
+todaySales.textContent=money(ts);todayExp.textContent=money(te);totalDue.textContent=money(due);profit.textContent=money(pr);
+lowStock.innerHTML=D.products.filter(x=>x.stock<=x.min).map(x=>'<span class="danger">'+x.name+' — '+x.stock+' টি</span>').join('<br>')||'সব পণ্যের স্টক ঠিক আছে';
+productList.innerHTML=D.products.map((x,i)=>'<div class="card">'+(x.img?'<img src="'+x.img+'" style="width:70px;height:70px;object-fit:cover;border-radius:8px">':'')+'<b>'+x.name+'</b><br>বারকোড: '+x.barcode+'<br>ক্রয়: '+money(x.buy)+' | বিক্রয়: '+money(x.sell)+'<br>স্টক: <b>'+x.stock+'</b></div>').join('')||'কোনো পণ্য নেই';
+customerList.innerHTML=D.customers.map(x=>(x.img?'<img src="'+x.img+'" style="width:60px;height:60px;object-fit:cover;border-radius:50%"><br>':'')+'<b>'+x.name+'</b><br>'+x.phone+'<br>'+x.address).join('<hr>')||'কোনো কাস্টমার নেই';
+dueList.innerHTML=D.dues.map(x=>x.date+' — '+x.name+' — '+(x.type==='due'?'বাকি ':'জমা ')+money(x.amount)).join('<br>')||'কোনো বাকি লেনদেন নেই';
+expenseList.innerHTML=D.expenses.map(x=>x.date+' — '+x.name+' — '+money(x.amount)).join('<br>')||'কোনো খরচ নেই';
+plBox.innerHTML='মোট লাভ/ক্ষতি: <b>'+money(pr)+'</b><br>বিক্রয় থেকে মোট লাভ: '+money(D.sales.reduce((s,x)=>s+x.qty*(x.price-x.cost),0))+'<br>মোট খরচ: '+money(D.expenses.reduce((s,x)=>s+x.amount,0));
+saleList.innerHTML=D.sales.slice(-10).reverse().map(x=>x.date+' — '+x.name+' — '+money(x.qty*x.price)).join('<br>')||'কোনো বিক্রয় নেই';
+}
+setInterval(()=>clock.textContent=new Date().toLocaleString('bn-BD'),1000);render();show('home');
+</script></body></html>
